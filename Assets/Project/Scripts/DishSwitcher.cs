@@ -8,7 +8,7 @@ public class DishSwitcher : MonoBehaviour
 
     private GameObject currentDishInstance;
     private int currentIndex = 0;
-    private bool isFirstDishPlaced = false; // Permet de savoir si la table est vide
+    private bool isFirstDishPlaced = false;
 
     [Header("Paramètres de Swipe")]
     public float swipeThreshold = 50f;
