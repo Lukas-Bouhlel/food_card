@@ -26,13 +26,21 @@ public class DishSwitcher : MonoBehaviour
 
     [Header("Rotation")]
     public bool keepObjectUpright = true;
+    [Tooltip("Sensibilité de rotation du plat. Plus la valeur est grande, plus ça tourne vite.")]
+    public float rotationSpeed = 0.2f;
 
     private GameObject currentDishInstance;
     private int currentIndex = 0;
     private bool isDishPlaced = false;
 
     private Vector2 startTouchPosition;
-    private Vector2 endTouchPosition;
+    private Vector2 lastTouchPosition;
+
+    // True si le geste commence sur le plat
+    private bool gestureStartedOnDish = false;
+
+    // True tant qu'on est en train de faire tourner le plat
+    private bool isRotatingDish = false;
 
     private Pose currentPlacementPose;
     private static List<ARRaycastHit> hits = new List<ARRaycastHit>();
@@ -50,16 +58,20 @@ public class DishSwitcher : MonoBehaviour
 
         Touch touch = Input.GetTouch(0);
 
-        if (touch.phase == TouchPhase.Began)
+        switch (touch.phase)
         {
-            startTouchPosition = touch.position;
-            endTouchPosition = touch.position;
-        }
+            case TouchPhase.Began:
+                BeginGesture(touch.position);
+                break;
 
-        if (touch.phase == TouchPhase.Ended)
-        {
-            endTouchPosition = touch.position;
-            ProcessInput(endTouchPosition);
+            case TouchPhase.Moved:
+                ContinueGesture(touch.position);
+                break;
+
+            case TouchPhase.Ended:
+            case TouchPhase.Canceled:
+                EndGesture(touch.position);
+                break;
         }
     }
 
@@ -68,37 +80,84 @@ public class DishSwitcher : MonoBehaviour
         // Test dans l'éditeur
         if (Input.GetMouseButtonDown(0))
         {
-            startTouchPosition = Input.mousePosition;
-            endTouchPosition = Input.mousePosition;
+            BeginGesture(Input.mousePosition);
+        }
+
+        if (Input.GetMouseButton(0))
+        {
+            ContinueGesture(Input.mousePosition);
         }
 
         if (Input.GetMouseButtonUp(0))
         {
-            endTouchPosition = Input.mousePosition;
-            ProcessInput(endTouchPosition);
+            EndGesture(Input.mousePosition);
         }
     }
 
-    void ProcessInput(Vector2 screenPosition)
+    void BeginGesture(Vector2 screenPosition)
     {
-        float swipeDistance = endTouchPosition.x - startTouchPosition.x;
+        startTouchPosition = screenPosition;
+        lastTouchPosition = screenPosition;
 
-        // Swipe horizontal
-        if (Mathf.Abs(swipeDistance) > swipeThreshold)
+        gestureStartedOnDish = IsTouchOnCurrentDish(screenPosition);
+        isRotatingDish = gestureStartedOnDish && isDishPlaced && currentDishInstance != null;
+    }
+
+    void ContinueGesture(Vector2 screenPosition)
+    {
+        
+        if (!isRotatingDish || currentDishInstance == null)
         {
-            if (!isDishPlaced || dishPrefabs == null || dishPrefabs.Length == 0)
-                return;
+            lastTouchPosition = screenPosition;
+            return;
+        }
 
-            if (swipeDistance > 0)
-                ShowPrevious();
-            else
-                ShowNext();
+        float deltaX = screenPosition.x - lastTouchPosition.x;
+        Debug.Log(deltaX);
+        RotateDish(deltaX);
+
+        lastTouchPosition = screenPosition;
+    }
+
+    void EndGesture(Vector2 screenPosition)
+    {
+        float swipeDistance = screenPosition.x - startTouchPosition.x;
+
+        if (gestureStartedOnDish)
+        {
+            // Si le geste a commencé sur le plat, on l'a déjà fait tourner pendant le drag.
+            // Un simple tap sur le plat ne fait rien.
         }
         else
         {
-            // Tap/clic simple = placer ou déplacer
-            TryPlaceOrMoveDish(screenPosition);
+            // Swipe horizontal en dehors du plat = changer de plat
+            if (Mathf.Abs(swipeDistance) > swipeThreshold)
+            {
+                if (!isDishPlaced || dishPrefabs == null || dishPrefabs.Length == 0)
+                {
+                    ResetGestureState();
+                    return;
+                }
+
+                if (swipeDistance > 0)
+                    ShowPrevious();
+                else
+                    ShowNext();
+            }
+            else
+            {
+                // Tap/clic simple en dehors du plat = placer ou déplacer
+                TryPlaceOrMoveDish(screenPosition);
+            }
         }
+
+        ResetGestureState();
+    }
+
+    void ResetGestureState()
+    {
+        gestureStartedOnDish = false;
+        isRotatingDish = false;
     }
 
     void TryPlaceOrMoveDish(Vector2 screenPosition)
@@ -118,8 +177,22 @@ public class DishSwitcher : MonoBehaviour
         if (raycastManager.Raycast(screenPosition, hits, TrackableType.PlaneWithinPolygon))
         {
             Pose hitPose = hits[0].pose;
+            Quaternion finalRotation;
 
-            Quaternion finalRotation = keepObjectUpright ? GetUprightRotation() : hitPose.rotation;
+            if (!isDishPlaced)
+            {
+                // Première pose
+                finalRotation = keepObjectUpright ? GetUprightRotation() : hitPose.rotation;
+            }
+            else
+            {
+                // Si l'objet est déjà posé, on garde sa rotation actuelle quand on le déplace
+                if (currentDishInstance != null)
+                    finalRotation = currentDishInstance.transform.rotation;
+                else
+                    finalRotation = keepObjectUpright ? GetUprightRotation() : hitPose.rotation;
+            }
+
             currentPlacementPose = new Pose(hitPose.position, finalRotation);
 
             if (!isDishPlaced)
@@ -154,6 +227,40 @@ public class DishSwitcher : MonoBehaviour
             forward = Vector3.forward;
 
         return Quaternion.LookRotation(forward.normalized);
+    }
+
+    bool IsTouchOnCurrentDish(Vector2 screenPosition)
+    {
+        if (currentDishInstance == null)
+            return false;
+
+        Camera cam = Camera.main;
+        if (cam == null)
+            return false;
+
+        Ray ray = cam.ScreenPointToRay(screenPosition);
+        Debug.DrawRay(ray.origin, ray.direction, Color.red, 200f);
+        if (Physics.Raycast(ray, out RaycastHit hit))
+        {
+            Debug.Log("Raycast" + hit.transform.name);
+            return hit.transform == currentDishInstance.transform ||
+                   hit.transform.IsChildOf(currentDishInstance.transform);
+        }
+        Debug.Log("RETURN");
+        return false;
+    }
+
+    void RotateDish(float deltaX)
+    {
+        if (currentDishInstance == null)
+            return;
+
+        float angle = -deltaX * rotationSpeed;
+
+        currentDishInstance.transform.Rotate(Vector3.up, angle, Space.World);
+
+        // On mémorise la rotation courante pour que le prochain plat garde aussi cette orientation
+        currentPlacementPose.rotation = currentDishInstance.transform.rotation;
     }
 
     public void ShowNext()
