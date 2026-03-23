@@ -1,17 +1,10 @@
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR.ARFoundation;
-using UnityEngine.XR.ARSubsystems;
 
 public class DishSwitcher : MonoBehaviour
 {
     [Header("Configuration des Plats")]
     public GameObject[] dishPrefabs;
     public Transform spawnPoint;
-
-    [Header("Configuration AR")]
-    public ARRaycastManager raycastManager;
-    private List<ARRaycastHit> hits = new List<ARRaycastHit>();
 
     private GameObject currentDishInstance;
     private int currentIndex = 0;
@@ -22,60 +15,66 @@ public class DishSwitcher : MonoBehaviour
     private Vector2 startTouchPosition;
     private Vector2 endTouchPosition;
 
+    void Start()
+    {
+        // ON NE FAIT PLUS RIEN ICI. 
+        // La scène commence totalement vide, aucun prefab n'est instancié.
+    }
+
     void Update()
     {
+        DetectSwipe();
+    }
+
+    void DetectSwipe()
+    {
+        // 1. Détection Tactile (Téléphone)
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
+
             if (touch.phase == TouchPhase.Began)
             {
                 startTouchPosition = touch.position;
                 endTouchPosition = touch.position;
             }
-            else if (touch.phase == TouchPhase.Ended)
+
+            if (touch.phase == TouchPhase.Ended)
             {
                 endTouchPosition = touch.position;
-                ProcessInteraction(touch.position);
+                CheckSwipeDirection();
             }
         }
-        else if (Input.GetMouseButtonDown(0))
+
+        // 2. Détection Souris (Ordinateur)
+        if (Input.GetMouseButtonDown(0))
         {
             startTouchPosition = Input.mousePosition;
             endTouchPosition = Input.mousePosition;
         }
-        else if (Input.GetMouseButtonUp(0))
+        if (Input.GetMouseButtonUp(0))
         {
             endTouchPosition = Input.mousePosition;
-            ProcessInteraction(Input.mousePosition);
+            CheckSwipeDirection();
         }
     }
 
-    void ProcessInteraction(Vector2 interactionPosition)
+    void CheckSwipeDirection()
     {
         float swipeDistance = endTouchPosition.x - startTouchPosition.x;
 
+        // Si c'est un vrai swipe (gauche ou droite)
         if (Mathf.Abs(swipeDistance) > swipeThreshold)
         {
-            if (isFirstDishPlaced)
-            {
-                if (swipeDistance > 0) ShowPrevious();
-                else ShowNext();
-            }
+            if (swipeDistance > 0) ShowPrevious();
+            else ShowNext();
         }
-        else
+        // Si c'est juste un "clic" (tap) et que la table est vide
+        else if (!isFirstDishPlaced)
         {
-            if (raycastManager != null && raycastManager.Raycast(interactionPosition, hits, TrackableType.PlaneWithinPolygon))
-            {
-                Pose hitPose = hits[0].pose;
-
-                spawnPoint.position = hitPose.position;
-
-                if (!isFirstDishPlaced)
-                {
-                    ShowDish(currentIndex);
-                    isFirstDishPlaced = true;
-                }
-            }
+            // On affiche le premier plat au simple toucher
+            ShowDish(currentIndex);
+            isFirstDishPlaced = true;
         }
     }
 
@@ -84,6 +83,7 @@ public class DishSwitcher : MonoBehaviour
         if (dishPrefabs.Length == 0) return;
         currentIndex = (currentIndex + 1) % dishPrefabs.Length;
         ShowDish(currentIndex);
+        isFirstDishPlaced = true;
     }
 
     public void ShowPrevious()
@@ -92,16 +92,20 @@ public class DishSwitcher : MonoBehaviour
         currentIndex--;
         if (currentIndex < 0) currentIndex = dishPrefabs.Length - 1;
         ShowDish(currentIndex);
+        isFirstDishPlaced = true;
     }
 
     void ShowDish(int index)
     {
-        if (currentDishInstance != null) Destroy(currentDishInstance);
+        // On détruit l'ancien SEULEMENT s'il y en a un
+        if (currentDishInstance != null)
+        {
+            Destroy(currentDishInstance);
+        }
 
+        // On instancie le nouveau tout frais
         currentDishInstance = Instantiate(dishPrefabs[index], spawnPoint.position, spawnPoint.rotation);
-
-        currentDishInstance.transform.SetParent(spawnPoint, false);
+        currentDishInstance.transform.SetParent(spawnPoint);
         currentDishInstance.transform.localPosition = Vector3.zero;
-        currentDishInstance.transform.localRotation = Quaternion.identity;
     }
 }
