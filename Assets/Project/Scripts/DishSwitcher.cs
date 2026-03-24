@@ -32,6 +32,8 @@ public class DishSwitcher : MonoBehaviour
     [Tooltip("Petite zone morte pour �viter les micro-mouvements involontaires.")]
     public float rotationDeadZone = 3f;
 
+    public event System.Action<int> onDishChanged;
+
     private GameObject currentDishInstance;
     private int currentIndex = 0;
     private bool isDishPlaced = false;
@@ -280,6 +282,17 @@ public class DishSwitcher : MonoBehaviour
         currentPlacementPose.rotation = currentDishInstance.transform.rotation;
     }
 
+    public void SelectDish(int index)
+    {
+        if (dishPrefabs == null || index < 0 || index >= dishPrefabs.Length)
+            return;
+
+        currentIndex = index;
+
+        if (isDishPlaced)
+            ShowDish(currentIndex);
+    }
+
     public void ShowNext()
     {
         if (dishPrefabs == null || dishPrefabs.Length == 0 || !isDishPlaced)
@@ -304,9 +317,7 @@ public class DishSwitcher : MonoBehaviour
     void ShowDish(int index)
     {
         if (currentDishInstance != null)
-        {
             Destroy(currentDishInstance);
-        }
 
         currentDishInstance = Instantiate(
             dishPrefabs[index],
@@ -315,6 +326,7 @@ public class DishSwitcher : MonoBehaviour
         );
 
         ApplyRealisticScale(currentDishInstance, index);
+        onDishChanged?.Invoke(index); // notify UI to scroll to this card
     }
 
     void ApplyRealisticScale(GameObject obj, int index)

@@ -331,6 +331,7 @@ GameObject:
   - component: {fileID: 163786359}
   - component: {fileID: 163786358}
   - component: {fileID: 163786357}
+  - component: {fileID: 163786361}
   m_Layer: 5
   m_Name: Scroll View
   m_TagString: Untagged
@@ -372,47 +373,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FoodcardFiller
   foodcardPrefab: {fileID: 3992447133938763278, guid: 55e09800763f8c14b98cf86829900c93, type: 3}
   contentParent: {fileID: 1562276860}
+  dishSwitcher: {fileID: 1281124800}
   dishes:
-  - dishName: "Ramen Tonkotsu Cr\xE9meux"
-    description: Rich pork bone broth, artisan noodles, soft-boiled egg, bamboo shoots,
-      chashu pork, nori, spring onions.
-    price: "16.50\u20AC"
-  - dishName: "Ramen Miso \xC9pic\xE9"
+  - dishName: Bouche
+    description: 'Beef '
+    price: "8.50\u20AC"
+    dishPrefab: {fileID: 889731990802673902, guid: d0fa2d82d713e08459872ddc5063d71d, type: 3}
+  - dishName: Ramen
     description: Savory miso broth, artisan noodles, marinated minced beef, sweet
       corn, soft-boiled egg, sesame, spring onions.
     price: "16.90\u20AC"
-  - dishName: "Pho B\u0153uf Maison"
-    description: Fragrant beef broth, rice noodles, thin sliced beef, bean sprouts,
-      fresh herbs, lime, red onion.
-    price: "15.90\u20AC"
-  - dishName: "Pad Tha\xEF Crevettes"
-    description: Stir-fried rice noodles, prawns, egg, tofu, bean sprouts, crushed
-      peanuts, chives, tamarind sauce.
-    price: "17.50\u20AC"
-  - dishName: Bibimbap Bulgogi
-    description: "Steamed rice, marinated beef bulgogi, saut\xE9ed vegetables, spinach,
-      carrots, fried egg, spicy gochujang sauce."
-    price: "16.90\u20AC"
-  - dishName: Curry Katsu Poulet
-    description: Crispy breaded chicken cutlet, Japanese curry sauce, steamed rice,
-      pickled vegetables, sesame.
-    price: "17.20\u20AC"
-  - dishName: Udon Tempura
-    description: Thick udon noodles in light dashi broth, shrimp tempura, fish cake,
-      wakame, spring onions.
-    price: "16.80\u20AC"
-  - dishName: "B\xF2 B\xFAn Citronnell"
-    description: Rice vermicelli, lemongrass beef, fresh salad, cucumber, pickled
-      carrots, crushed peanuts, crispy shallots.
-    price: "15.90\u20AC"
-  - dishName: Donburi Teriyaki Saumon
-    description: Steamed rice, glazed salmon teriyaki, avocado, edamame, sesame,
-      cucumber, spring onions.
-    price: "17.90\u20AC"
-  - dishName: "Laksa Coco \xC9pic\xE9e"
-    description: Spicy coconut curry broth, rice noodles, chicken, tofu puffs, bean
-      sprouts, coriander, lime.
-    price: "17.50\u20AC"
+    dishPrefab: {fileID: 392466613324293052, guid: e44601130ae9a3b408bba5ef472a0c19, type: 3}
+  - dishName: Gyoza
+    description: Chicken gyoza
+    price: "7.90\u20AC"
+    dishPrefab: {fileID: 6180614225073330708, guid: e3b673e1bb917594f8ecfc17176305fe, type: 3}
+  - dishName: Onigiri
+    description: Rice
+    price: "3.9\u20AC"
+    dishPrefab: {fileID: 6573297212031600805, guid: 38500ee867f178a4bb75db6c2a665dce, type: 3}
+  - dishName: Tea
+    description: Green tea
+    price: "6.50\u20AC"
+    dishPrefab: {fileID: 3882542561031340320, guid: 3cee289e0b107934fbbcee803a0a2e36, type: 3}
 --- !u!114 &163786358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -481,6 +464,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 163786355}
   m_CullTransparentMesh: 1
+--- !u!114 &163786361
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163786355}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f36cf7779a5c0748ace70249899a5d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardSnapper
+  snapSpeed: 10
+  dishSwitcher: {fileID: 1281124800}
 --- !u!1 &409730826
 GameObject:
   m_ObjectHideFlags: 0
@@ -1006,7 +1003,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.000045257657, y: 0}
   m_SizeDelta: {x: 0, y: -64.27759}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1562276861

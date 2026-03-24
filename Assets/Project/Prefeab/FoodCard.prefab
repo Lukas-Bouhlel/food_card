@@ -194,7 +194,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1645891978796951618
 RectTransform:
   m_ObjectHideFlags: 0
@@ -529,6 +529,7 @@ MonoBehaviour:
   descriptionText: {fileID: 4393907801070008671}
   priceText: {fileID: 3022557951678925391}
   dishImage: {fileID: 1341670393774830867}
+  viewInARButton: {fileID: 133411928749007886}
 --- !u!114 &1240948022914270455
 MonoBehaviour:
   m_ObjectHideFlags: 0
