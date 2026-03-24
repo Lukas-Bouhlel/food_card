@@ -8,28 +8,28 @@ public class DishSwitcher : MonoBehaviour
     [Header("Configuration des Plats")]
     public GameObject[] dishPrefabs;
 
-    [Header("Taille réelle des plats (en mètres)")]
-    [Tooltip("Largeur cible par défaut si aucune valeur spécifique n'est définie.")]
+    [Header("Taille rï¿½elle des plats (en mï¿½tres)")]
+    [Tooltip("Largeur cible par dï¿½faut si aucune valeur spï¿½cifique n'est dï¿½finie.")]
     public float defaultDishWidthMeters = 0.35f;
 
-    [Tooltip("Largeur cible pour chaque plat, dans le même ordre que Dish Prefabs. Ex: 0.32 = 32 cm")]
+    [Tooltip("Largeur cible pour chaque plat, dans le mï¿½me ordre que Dish Prefabs. Ex: 0.32 = 32 cm")]
     public float[] dishTargetWidthsMeters;
 
-    [Tooltip("Multiplicateur global final si tu veux tout agrandir/réduire un peu.")]
+    [Tooltip("Multiplicateur global final si tu veux tout agrandir/rï¿½duire un peu.")]
     public float globalScaleMultiplier = 1f;
 
     [Header("AR")]
     public ARRaycastManager raycastManager;
 
-    [Header("Paramètres de Swipe")]
+    [Header("Paramï¿½tres de Swipe")]
     public float swipeThreshold = 50f;
 
     [Header("Rotation")]
     public bool keepObjectUpright = true;
-    [Tooltip("Sensibilité de rotation du plat. Plus la valeur est grande, plus ça tourne vite.")]
+    [Tooltip("Sensibilitï¿½ de rotation du plat. Plus la valeur est grande, plus ï¿½a tourne vite.")]
     public float rotationSpeed = 0.2f;
 
-    [Tooltip("Petite zone morte pour éviter les micro-mouvements involontaires.")]
+    [Tooltip("Petite zone morte pour ï¿½viter les micro-mouvements involontaires.")]
     public float rotationDeadZone = 3f;
 
     private GameObject currentDishInstance;
@@ -39,13 +39,13 @@ public class DishSwitcher : MonoBehaviour
     private Vector2 startTouchPosition;
     private Vector2 lastTouchPosition;
 
-    // Le geste a commencé sur le plat ?
+    // Le geste a commencï¿½ sur le plat ?
     private bool gestureStartedOnDish = false;
 
     // On est en train de tourner le plat ?
     private bool isRotatingDish = false;
 
-    // Le plat a réellement tourné pendant ce geste ?
+    // Le plat a rï¿½ellement tournï¿½ pendant ce geste ?
     private bool hasRotatedDuringGesture = false;
 
     private Pose currentPlacementPose;
@@ -56,7 +56,7 @@ public class DishSwitcher : MonoBehaviour
         HandleTouchInput();
 
 #if UNITY_EDITOR || UNITY_STANDALONE
-        // Souris uniquement dans l'éditeur / PC
+        // Souris uniquement dans l'ï¿½diteur / PC
         if (Input.touchCount == 0)
         {
             HandleMouseInput();
@@ -140,17 +140,17 @@ public class DishSwitcher : MonoBehaviour
     {
         float swipeDistance = screenPosition.x - startTouchPosition.x;
 
-        // CAS 1 : le geste a commencé sur le plat
+        // CAS 1 : le geste a commencï¿½ sur le plat
         // => on ne doit JAMAIS changer de prefab
         if (gestureStartedOnDish)
         {
-            // Si on a tourné, on garde juste la rotation.
-            // Si c'était juste un tap sur le plat, on ne fait rien.
+            // Si on a tournï¿½, on garde juste la rotation.
+            // Si c'ï¿½tait juste un tap sur le plat, on ne fait rien.
             ResetGestureState();
             return;
         }
 
-        // CAS 2 : geste commencé hors du plat
+        // CAS 2 : geste commencï¿½ hors du plat
         if (Mathf.Abs(swipeDistance) > swipeThreshold)
         {
             if (!isDishPlaced || dishPrefabs == null || dishPrefabs.Length == 0)
@@ -166,7 +166,7 @@ public class DishSwitcher : MonoBehaviour
         }
         else
         {
-            // Tap simple hors du plat = placer ou déplacer
+            // Tap simple hors du plat = placer ou dï¿½placer
             TryPlaceOrMoveDish(screenPosition);
         }
 
@@ -184,13 +184,13 @@ public class DishSwitcher : MonoBehaviour
     {
         if (raycastManager == null)
         {
-            Debug.LogError("ARRaycastManager non assigné dans l'Inspector.");
+            Debug.LogError("ARRaycastManager non assignï¿½ dans l'Inspector.");
             return;
         }
 
         if (dishPrefabs == null || dishPrefabs.Length == 0)
         {
-            Debug.LogError("Aucun prefab de plat assigné.");
+            Debug.LogError("Aucun prefab de plat assignï¿½.");
             return;
         }
 
@@ -228,7 +228,7 @@ public class DishSwitcher : MonoBehaviour
         }
         else
         {
-            Debug.Log("Aucun plan détecté à cet endroit.");
+            Debug.Log("Aucun plan dï¿½tectï¿½ ï¿½ cet endroit.");
         }
     }
 
@@ -276,7 +276,7 @@ public class DishSwitcher : MonoBehaviour
 
         currentDishInstance.transform.Rotate(Vector3.up, angle, Space.World);
 
-        // On garde cette rotation en mémoire
+        // On garde cette rotation en mï¿½moire
         currentPlacementPose.rotation = currentDishInstance.transform.rotation;
     }
 
@@ -333,7 +333,7 @@ public class DishSwitcher : MonoBehaviour
 
         if (renderers == null || renderers.Length == 0)
         {
-            Debug.LogWarning("Aucun Renderer trouvé sur le prefab : impossible d'ajuster automatiquement la taille.");
+            Debug.LogWarning("Aucun Renderer trouvï¿½ sur le prefab : impossible d'ajuster automatiquement la taille.");
             return;
         }
 
@@ -347,13 +347,13 @@ public class DishSwitcher : MonoBehaviour
 
         if (currentWidth <= 0.0001f)
         {
-            Debug.LogWarning("Largeur du modèle trop petite ou invalide.");
+            Debug.LogWarning("Largeur du modï¿½le trop petite ou invalide.");
             return;
         }
 
         float scaleFactor = (targetWidth / currentWidth) * globalScaleMultiplier;
         obj.transform.localScale *= scaleFactor;
 
-        Debug.Log("Plat ajusté à environ " + targetWidth + " m de large.");
+        Debug.Log("Plat ajustï¿½ ï¿½ environ " + targetWidth + " m de large.");
     }
 }
