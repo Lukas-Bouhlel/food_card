@@ -42,4 +42,4 @@ Offrir une expérience utilisateur fluide et intuitive pour explorer une carte d
 ## 📸 Aperçu du fonctionnement
 1. **Scan :** Dirigez le téléphone vers une surface plane.
 2. **Placement :** Appuyez pour faire apparaître votre plat.
-3. **Exploration :** Swipez pour changer de menu, tournez pour voir les détails.
+3. **Exploration :** Swipez pour changer de menu, tournez pour voir les détails
