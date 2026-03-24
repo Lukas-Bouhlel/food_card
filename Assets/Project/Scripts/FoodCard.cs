@@ -16,6 +16,7 @@ public class FoodCard : MonoBehaviour
         typeText.text = dish.dishName;
         descriptionText.text = dish.description;
         priceText.text = dish.price;
+        dishImage.sprite = dish.image;
 
         if (viewInARButton != null && dishSwitcher != null)
         {

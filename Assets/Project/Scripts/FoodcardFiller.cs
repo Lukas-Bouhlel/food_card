@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 [System.Serializable]
 public class DishData
@@ -8,6 +9,7 @@ public class DishData
     [TextArea] public string description;
     public string price;
     public GameObject dishPrefab;
+    public Sprite image;
 }
 
 public class FoodcardFiller : MonoBehaviour

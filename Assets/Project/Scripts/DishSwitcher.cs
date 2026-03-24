@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
 
@@ -44,6 +45,9 @@ public class DishSwitcher : MonoBehaviour
     // Le geste a commenc� sur le plat ?
     private bool gestureStartedOnDish = false;
 
+    // Le geste a commenc� sur un �l�ment UI ?
+    private bool gestureBlockedByUI = false;
+
     // On est en train de tourner le plat ?
     private bool isRotatingDish = false;
 
@@ -76,17 +80,23 @@ public class DishSwitcher : MonoBehaviour
         switch (touch.phase)
         {
             case TouchPhase.Began:
-                BeginGesture(touch.position);
+                gestureBlockedByUI = EventSystem.current != null &&
+                                     EventSystem.current.IsPointerOverGameObject(touch.fingerId);
+                if (!gestureBlockedByUI)
+                    BeginGesture(touch.position);
                 break;
 
             case TouchPhase.Moved:
             case TouchPhase.Stationary:
-                ContinueGesture(touch.position);
+                if (!gestureBlockedByUI)
+                    ContinueGesture(touch.position);
                 break;
 
             case TouchPhase.Ended:
             case TouchPhase.Canceled:
-                EndGesture(touch.position);
+                if (!gestureBlockedByUI)
+                    EndGesture(touch.position);
+                gestureBlockedByUI = false;
                 break;
         }
     }
@@ -95,17 +105,22 @@ public class DishSwitcher : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            BeginGesture(Input.mousePosition);
+            gestureBlockedByUI = EventSystem.current != null &&
+                                 EventSystem.current.IsPointerOverGameObject();
+            if (!gestureBlockedByUI)
+                BeginGesture(Input.mousePosition);
         }
 
-        if (Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0) && !gestureBlockedByUI)
         {
             ContinueGesture(Input.mousePosition);
         }
 
         if (Input.GetMouseButtonUp(0))
         {
-            EndGesture(Input.mousePosition);
+            if (!gestureBlockedByUI)
+                EndGesture(Input.mousePosition);
+            gestureBlockedByUI = false;
         }
     }
 

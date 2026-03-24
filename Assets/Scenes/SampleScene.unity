@@ -379,23 +379,28 @@ MonoBehaviour:
     description: 'Beef '
     price: "8.50\u20AC"
     dishPrefab: {fileID: 889731990802673902, guid: d0fa2d82d713e08459872ddc5063d71d, type: 3}
+    image: {fileID: 21300000, guid: ac11304b80d4b3845a62b09d284cb705, type: 3}
   - dishName: Ramen
     description: Savory miso broth, artisan noodles, marinated minced beef, sweet
       corn, soft-boiled egg, sesame, spring onions.
     price: "16.90\u20AC"
     dishPrefab: {fileID: 392466613324293052, guid: e44601130ae9a3b408bba5ef472a0c19, type: 3}
+    image: {fileID: 21300000, guid: f7ce93ec1f13435489bd4fb70c66aa1e, type: 3}
   - dishName: Gyoza
     description: Chicken gyoza
     price: "7.90\u20AC"
     dishPrefab: {fileID: 6180614225073330708, guid: e3b673e1bb917594f8ecfc17176305fe, type: 3}
+    image: {fileID: 21300000, guid: 28bdea77dbdafb549a2bdb5fc6707012, type: 3}
   - dishName: Onigiri
     description: Rice
     price: "3.9\u20AC"
     dishPrefab: {fileID: 6573297212031600805, guid: 38500ee867f178a4bb75db6c2a665dce, type: 3}
+    image: {fileID: 21300000, guid: 443b24bb3d3daee4fbe2f1e9d69bc8d9, type: 3}
   - dishName: Tea
     description: Green tea
     price: "6.50\u20AC"
     dishPrefab: {fileID: 3882542561031340320, guid: 3cee289e0b107934fbbcee803a0a2e36, type: 3}
+    image: {fileID: 21300000, guid: f5ebcdb16f1ac234898af90377a3fea3, type: 3}
 --- !u!114 &163786358
 MonoBehaviour:
   m_ObjectHideFlags: 0
