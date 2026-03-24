@@ -1,4 +1,4 @@
-## 🚀 Objectif du projet
+## 🚀 Objectif du projet 
 Offrir une expérience utilisateur fluide et intuitive pour explorer une carte de plats en 3D. L'application mise sur des **gestes naturels** et une interface épurée.
 
 ## ✨ Fonctionnalités principales
