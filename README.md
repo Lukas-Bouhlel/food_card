@@ -12,7 +12,7 @@ Offrir une expérience utilisateur fluide et intuitive pour explorer une carte d
 ### 🍽️ Navigation interactive
 * **Gestes de Swipe :** Glissez vers la gauche ou la droite pour changer de plat.
 * **Boucle circulaire :** La navigation revient automatiquement au premier plat après le dernier.
-* **Contrôles hybrides :** Compatible avec les gestes tactiles et les boutons UI (`ShowNext()` / `ShowPrevious()`).
+* **Contrôles hybrides :** Compatible avec les gestes tactiles et l'interface UI (`ShowNext()` / `ShowPrevious()`).
 
 ### 🔄 Manipulation & Réalisme
 * **Rotation intuitive :** Faites pivoter le plat sur son axe vertical (Y) avec le doigt.
