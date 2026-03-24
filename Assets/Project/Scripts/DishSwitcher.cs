@@ -5,355 +5,179 @@ using UnityEngine.XR.ARSubsystems;
 
 public class DishSwitcher : MonoBehaviour
 {
-    [Header("Configuration des Plats")]
+    [Header("Plats")]
     public GameObject[] dishPrefabs;
 
-    [Header("Taille réelle des plats (en mètres)")]
-    [Tooltip("Largeur cible par défaut si aucune valeur spécifique n'est définie.")]
+    [Header("Scale")]
     public float defaultDishWidthMeters = 0.35f;
-
-    [Tooltip("Largeur cible pour chaque plat, dans le même ordre que Dish Prefabs. Ex: 0.32 = 32 cm")]
     public float[] dishTargetWidthsMeters;
-
-    [Tooltip("Multiplicateur global final si tu veux tout agrandir/réduire un peu.")]
     public float globalScaleMultiplier = 1f;
 
     [Header("AR")]
     public ARRaycastManager raycastManager;
 
-    [Header("Paramètres de Swipe")]
+    [Header("Gestes")]
     public float swipeThreshold = 50f;
-
-    [Header("Rotation")]
-    public bool keepObjectUpright = true;
-    [Tooltip("Sensibilité de rotation du plat. Plus la valeur est grande, plus ça tourne vite.")]
     public float rotationSpeed = 0.2f;
-
-    [Tooltip("Petite zone morte pour éviter les micro-mouvements involontaires.")]
     public float rotationDeadZone = 3f;
+    public bool keepObjectUpright = true;
 
-    private GameObject currentDishInstance;
-    private int currentIndex = 0;
-    private bool isDishPlaced = false;
+    // -- État --
+    private GameObject _dish;
+    private int _index = 0;
+    private bool _placed = false;
+    private Pose _pose;
 
-    private Vector2 startTouchPosition;
-    private Vector2 lastTouchPosition;
+    // -- Geste en cours --
+    private Vector2 _startPos;
+    private Vector2 _lastPos;
+    private bool _onDish;
+    private bool _rotating;
 
-    // Le geste a commencé sur le plat ?
-    private bool gestureStartedOnDish = false;
+    private static readonly List<ARRaycastHit> _hits = new();
 
-    // On est en train de tourner le plat ?
-    private bool isRotatingDish = false;
-
-    // Le plat a réellement tourné pendant ce geste ?
-    private bool hasRotatedDuringGesture = false;
-
-    private Pose currentPlacementPose;
-    private static readonly List<ARRaycastHit> hits = new List<ARRaycastHit>();
-
+    // -- Lifecycle --
     void Update()
     {
-        HandleTouchInput();
-
-#if UNITY_EDITOR || UNITY_STANDALONE
-        // Souris uniquement dans l'éditeur / PC
-        if (Input.touchCount == 0)
-        {
-            HandleMouseInput();
-        }
-#endif
+        HandleTouch();
+        #if UNITY_EDITOR || UNITY_STANDALONE
+            if (Input.touchCount == 0) HandleMouse();
+        #endif
     }
 
-    void HandleTouchInput()
+    // -- Entrées --
+    void HandleTouch()
     {
-        if (Input.touchCount == 0)
-            return;
-
-        Touch touch = Input.GetTouch(0);
-
-        switch (touch.phase)
-        {
-            case TouchPhase.Began:
-                BeginGesture(touch.position);
-                break;
-
-            case TouchPhase.Moved:
-            case TouchPhase.Stationary:
-                ContinueGesture(touch.position);
-                break;
-
-            case TouchPhase.Ended:
-            case TouchPhase.Canceled:
-                EndGesture(touch.position);
-                break;
-        }
+        if (Input.touchCount == 0) return;
+        Touch t = Input.GetTouch(0);
+        if (t.phase == TouchPhase.Began) OnBegin(t.position);
+        else if (t.phase == TouchPhase.Moved || t.phase == TouchPhase.Stationary) OnMove(t.position);
+        else if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled) OnEnd(t.position);
     }
 
-    void HandleMouseInput()
+    void HandleMouse()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            BeginGesture(Input.mousePosition);
-        }
-
-        if (Input.GetMouseButton(0))
-        {
-            ContinueGesture(Input.mousePosition);
-        }
-
-        if (Input.GetMouseButtonUp(0))
-        {
-            EndGesture(Input.mousePosition);
-        }
+        if (Input.GetMouseButtonDown(0)) OnBegin(Input.mousePosition);
+        if (Input.GetMouseButton(0)) OnMove(Input.mousePosition);
+        if (Input.GetMouseButtonUp(0)) OnEnd(Input.mousePosition);
     }
 
-    void BeginGesture(Vector2 screenPosition)
+    // -- Gestes --
+    void OnBegin(Vector2 pos)
     {
-        startTouchPosition = screenPosition;
-        lastTouchPosition = screenPosition;
-
-        gestureStartedOnDish = IsTouchOnCurrentDish(screenPosition);
-        isRotatingDish = gestureStartedOnDish && isDishPlaced && currentDishInstance != null;
-        hasRotatedDuringGesture = false;
+        _startPos = _lastPos = pos;
+        _onDish = HitsDish(pos);// le doigt est-il posé sur le plat ?
+        _rotating = _onDish && _placed && _dish != null;// si oui on peule rotate 
     }
 
-    void ContinueGesture(Vector2 screenPosition)
+    void OnMove(Vector2 pos)
     {
-        if (!isRotatingDish || currentDishInstance == null)
+        if (_rotating && _dish != null)
         {
-            lastTouchPosition = screenPosition;
-            return;
-        }
-
-        float deltaX = screenPosition.x - lastTouchPosition.x;
-
-        if (Mathf.Abs(deltaX) >= rotationDeadZone)
-        {
-            RotateDish(deltaX);
-            hasRotatedDuringGesture = true;
-        }
-
-        lastTouchPosition = screenPosition;
-    }
-
-    void EndGesture(Vector2 screenPosition)
-    {
-        float swipeDistance = screenPosition.x - startTouchPosition.x;
-
-        // CAS 1 : le geste a commencé sur le plat
-        // => on ne doit JAMAIS changer de prefab
-        if (gestureStartedOnDish)
-        {
-            // Si on a tourné, on garde juste la rotation.
-            // Si c'était juste un tap sur le plat, on ne fait rien.
-            ResetGestureState();
-            return;
-        }
-
-        // CAS 2 : geste commencé hors du plat
-        if (Mathf.Abs(swipeDistance) > swipeThreshold)
-        {
-            if (!isDishPlaced || dishPrefabs == null || dishPrefabs.Length == 0)
+            float dx = pos.x - _lastPos.x;// déplacement horizontal du doigt
+            if (Mathf.Abs(dx) >= rotationDeadZone)// ignore les micro-mouvements
             {
-                ResetGestureState();
-                return;
+                // rotation du plat sur l'axe Y
+                _dish.transform.Rotate(Vector3.up, -dx * rotationSpeed, Space.World);
+                _pose.rotation = _dish.transform.rotation;// mémorise la nouvelle rotation
             }
+        }
+        _lastPos = pos;
+    }
 
-            if (swipeDistance > 0)
-                ShowPrevious();
+    void OnEnd(Vector2 pos)
+    {
+        float swipe = pos.x - _startPos.x;// distance horizontale totale
+
+        if (!_onDish)// geste hors du plat uniquement
+        {
+            if (Mathf.Abs(swipe) > swipeThreshold)
+                Navigate(swipe > 0 ? -1 : 1);// swipe : changer de plat
             else
-                ShowNext();
+                TryPlace(pos);// tap : placer / déplacer
         }
-        else
-        {
-            // Tap simple hors du plat = placer ou déplacer
-            TryPlaceOrMoveDish(screenPosition);
-        }
+        // si le geste était sur le plat, on ne fait rien (rotation déjà appliquée dans OnMove)
 
-        ResetGestureState();
+        _onDish = _rotating = false;
     }
 
-    void ResetGestureState()
+    // -- Navigation --
+    void Navigate(int dir)
     {
-        gestureStartedOnDish = false;
-        isRotatingDish = false;
-        hasRotatedDuringGesture = false;
+        if (!_placed || dishPrefabs == null || dishPrefabs.Length == 0) return;
+        _index = (_index + dir + dishPrefabs.Length) % dishPrefabs.Length;
+        SpawnDish();
     }
 
-    void TryPlaceOrMoveDish(Vector2 screenPosition)
+    public void ShowNext() => Navigate(+1);
+    public void ShowPrevious() => Navigate(-1);
+
+    // -- Placement AR --
+    void TryPlace(Vector2 screenPos)
     {
-        if (raycastManager == null)
-        {
-            Debug.LogError("ARRaycastManager non assigné dans l'Inspector.");
-            return;
-        }
+        if (dishPrefabs == null || dishPrefabs.Length == 0 || raycastManager == null) return;
+        if (!raycastManager.Raycast(screenPos, _hits, TrackableType.PlaneWithinPolygon)) return;// aucun plan détecté donc euh false :)
 
-        if (dishPrefabs == null || dishPrefabs.Length == 0)
-        {
-            Debug.LogError("Aucun prefab de plat assigné.");
-            return;
-        }
+        Pose hit = _hits[0].pose;
 
-        if (raycastManager.Raycast(screenPosition, hits, TrackableType.PlaneWithinPolygon))
-        {
-            Pose hitPose = hits[0].pose;
-            Quaternion finalRotation;
+        // conserve la rotation actuelle si le plat est déjà placé, sinon oriente vers la caméra
+        Quaternion rot = (_placed && _dish != null)
+            ? _dish.transform.rotation
+            : keepObjectUpright ? CameraForwardRotation() : hit.rotation;
 
-            if (!isDishPlaced)
-            {
-                finalRotation = keepObjectUpright ? GetUprightRotation() : hitPose.rotation;
-            }
-            else
-            {
-                if (currentDishInstance != null)
-                    finalRotation = currentDishInstance.transform.rotation;
-                else
-                    finalRotation = keepObjectUpright ? GetUprightRotation() : hitPose.rotation;
-            }
+        _pose = new Pose(hit.position, rot);
 
-            currentPlacementPose = new Pose(hitPose.position, finalRotation);
-
-            if (!isDishPlaced)
-            {
-                ShowDish(currentIndex);
-                isDishPlaced = true;
-            }
-            else
-            {
-                currentDishInstance.transform.SetPositionAndRotation(
-                    currentPlacementPose.position,
-                    currentPlacementPose.rotation
-                );
-            }
-        }
-        else
-        {
-            Debug.Log("Aucun plan détecté à cet endroit.");
-        }
+        if (!_placed) { SpawnDish(); _placed = true; }// premier placement du plat
+        else _dish.transform.SetPositionAndRotation(_pose.position, _pose.rotation);// déplacement du plat
     }
 
-    Quaternion GetUprightRotation()
+    // -- Spawn & Scale des plats --
+    void SpawnDish()
     {
-        Camera cam = Camera.main;
-        if (cam == null)
-            return Quaternion.identity;
-
-        Vector3 forward = cam.transform.forward;
-        forward.y = 0f;
-
-        if (forward.sqrMagnitude < 0.001f)
-            forward = Vector3.forward;
-
-        return Quaternion.LookRotation(forward.normalized);
+        if (_dish != null) Destroy(_dish);// supprime l'ancien plat
+        _dish = Instantiate(dishPrefabs[_index], _pose.position, _pose.rotation);
+        ScaleDish(_dish);
     }
 
-    bool IsTouchOnCurrentDish(Vector2 screenPosition)
+    void ScaleDish(GameObject obj)
     {
-        if (currentDishInstance == null)
-            return false;
-
-        Camera cam = Camera.main;
-        if (cam == null)
-            return false;
-
-        Ray ray = cam.ScreenPointToRay(screenPosition);
-
-        if (Physics.Raycast(ray, out RaycastHit hit))
-        {
-            return hit.transform == currentDishInstance.transform ||
-                   hit.transform.IsChildOf(currentDishInstance.transform);
-        }
-
-        return false;
-    }
-
-    void RotateDish(float deltaX)
-    {
-        if (currentDishInstance == null)
-            return;
-
-        float angle = -deltaX * rotationSpeed;
-
-        currentDishInstance.transform.Rotate(Vector3.up, angle, Space.World);
-
-        // On garde cette rotation en mémoire
-        currentPlacementPose.rotation = currentDishInstance.transform.rotation;
-    }
-
-    public void ShowNext()
-    {
-        if (dishPrefabs == null || dishPrefabs.Length == 0 || !isDishPlaced)
-            return;
-
-        currentIndex = (currentIndex + 1) % dishPrefabs.Length;
-        ShowDish(currentIndex);
-    }
-
-    public void ShowPrevious()
-    {
-        if (dishPrefabs == null || dishPrefabs.Length == 0 || !isDishPlaced)
-            return;
-
-        currentIndex--;
-        if (currentIndex < 0)
-            currentIndex = dishPrefabs.Length - 1;
-
-        ShowDish(currentIndex);
-    }
-
-    void ShowDish(int index)
-    {
-        if (currentDishInstance != null)
-        {
-            Destroy(currentDishInstance);
-        }
-
-        currentDishInstance = Instantiate(
-            dishPrefabs[index],
-            currentPlacementPose.position,
-            currentPlacementPose.rotation
-        );
-
-        ApplyRealisticScale(currentDishInstance, index);
-    }
-
-    void ApplyRealisticScale(GameObject obj, int index)
-    {
-        float targetWidth = defaultDishWidthMeters;
-
-        if (dishTargetWidthsMeters != null &&
-            index >= 0 &&
-            index < dishTargetWidthsMeters.Length &&
-            dishTargetWidthsMeters[index] > 0.001f)
-        {
-            targetWidth = dishTargetWidthsMeters[index];
-        }
+        // largeur cible : valeur spécifique au plat, ou valeur par défaut
+        float target = (dishTargetWidthsMeters != null &&
+                        _index < dishTargetWidthsMeters.Length &&
+                        dishTargetWidthsMeters[_index] > 0.001f)
+            ? dishTargetWidthsMeters[_index]
+            : defaultDishWidthMeters;
 
         Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return;
 
-        if (renderers == null || renderers.Length == 0)
-        {
-            Debug.LogWarning("Aucun Renderer trouvé sur le prefab : impossible d'ajuster automatiquement la taille.");
-            return;
-        }
-
+        // calcule les bounds combinées de tous les renderers du prefab
         Bounds bounds = renderers[0].bounds;
-        for (int i = 1; i < renderers.Length; i++)
-        {
-            bounds.Encapsulate(renderers[i].bounds);
-        }
+        foreach (var r in renderers) bounds.Encapsulate(r.bounds);
 
-        float currentWidth = Mathf.Max(bounds.size.x, bounds.size.z);
+        float width = Mathf.Max(bounds.size.x, bounds.size.z); // largeur réelle du modèle (X ou Z)
+        if (width < 0.0001f) return;
 
-        if (currentWidth <= 0.0001f)
-        {
-            Debug.LogWarning("Largeur du modèle trop petite ou invalide.");
-            return;
-        }
+        obj.transform.localScale *= (target / width) * globalScaleMultiplier; // applique le scale
+    }
 
-        float scaleFactor = (targetWidth / currentWidth) * globalScaleMultiplier;
-        obj.transform.localScale *= scaleFactor;
+    // -- Utilitaires --
+    Quaternion CameraForwardRotation()
+    {
+        if (Camera.main == null) return Quaternion.identity;
+        Vector3 forward = Camera.main.transform.forward;
+        forward.y = 0f;// ignore l'inclinaison verticale pour avoir uniquement l'inclinaison des plats en horizontale
+        return forward.sqrMagnitude > 0.001f
+            ? Quaternion.LookRotation(forward.normalized)
+            : Quaternion.identity;
+    }
 
-        Debug.Log("Plat ajusté à environ " + targetWidth + " m de large.");
+    // -- Vérifie si le doigt est posé sur le plat --
+    bool HitsDish(Vector2 screenPos)
+    {
+        if (_dish == null || Camera.main == null) return false;
+        // rayon depuis l'écran vers la scène : touche-t-il le plat ou l'un de ses enfants ?
+        return Physics.Raycast(Camera.main.ScreenPointToRay(screenPos), out RaycastHit hit) &&
+               (hit.transform == _dish.transform || hit.transform.IsChildOf(_dish.transform));
     }
 }
